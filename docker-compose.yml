@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    ports:
+      - '80:80'
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - dashboard-network
+
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    volumes:
+      - ./volumes/mongodb:/data/db
+    networks:
+      - api-network
+
+  minio:
+    image: quay.io/minio/minio:latest
+    ports:
+      - 9000:9000
+      - 9090:9090
+    environment:
+      - VIRTUAL_HOST=minio.localhost
+      - VIRTUAL_PORT=9090
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - ./volumes/minio/data:/data
+    command: server /data --console-address :9090
+    networks:
+      - api-network
+      - dashboard-network
+
+  api:
+    build:
+      dockerfile: Dockerfile.dev
+      args:
+        APP_PATH: 'cloud-file-storage-api'
+        APP_NAME: '@cloud-file-storage/cloud-file-storage-api'
+        PNPM_VERSION: "8.6.0"
+        NODE_VERSION: "18.16.0"
+        START_SCRIPT: 'start:debug'
+    volumes:
+      - ./apps/cloud-file-storage-api/src:/usr/src/app/apps/cloud-file-storage-api/src
+      - ./apps/cloud-file-storage-api/package.json:/usr/src/app/apps/cloud-file-storage-api/package.json:ro
+    ports:
+      - 9228:9229 # Nodejs Debug port
+    environment:
+      VIRTUAL_HOST: api.localhost
+      VIRTUAL_PORT: 3000
+      MINIO_HOST: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MONGO_USERNAME: apiUser
+      MONGO_PASSWORD: apiUser
+      MONGODB_URI: mongodb://apiUser:apiPass@mongodb:27017/api
+      MONGO_HOST: mongodb
+      MONGO_DATABASE: api
+      NODE_ENV: development
+    expose:
+      - 3000
+    networks:
+      - dashboard-network
+      - api-network
+
+#  cloud-dashboard:
+#    build:
+#      dockerfile: Dockerfile.dev
+#      args:
+#        APP_PATH: 'cloud-dashboard'
+#        APP_NAME: '@cloud-storage/cloud-dashboard'
+#        START_SCRIPT: 'dev --host'
+#    volumes:
+#      - ./apps/admin-dashboard/src/:/usr/src/app/apps/admin-dashboard/src/
+#      - ./apps/admin-dashboard/package.json:/usr/src/app/apps/admin-dashboard/package.json:ro
+#    environment:
+#      VIRTUAL_HOST: 'admin.localhost'
+#      VIRTUAL_PORT: 5173
+#      NODE_ENV: 'development'
+#    networks:
+#      - dashboard-network
+#    depends_on:
+#      - nginx-proxy
+#      - api
+
+networks:
+  dashboard-network:
+    driver: bridge
+  api-network:
+    driver: bridge

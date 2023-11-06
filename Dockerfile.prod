@@ -1,0 +1,46 @@
+ARG NODE_VERSION
+
+FROM node:$NODE_VERSION-alpine AS base
+ARG SERVICE_NAME
+ARG HUSKY
+ARG VITE_API_URL
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+COPY . /app
+WORKDIR /app
+
+FROM base AS prod-deps
+ARG SERVICE_NAME
+ENV NODE_ENV=production
+# Install for production optimized dependencies
+RUN pnpm --filter @cloud-file-storage/$SERVICE_NAME install --prod --frozen-lockfile
+
+FROM base AS build
+ARG SERVICE_NAME
+ARG HUSKY
+# Argument nur relevant für Services 'pwa' & 'admin-dashboard'
+ARG VITE_API_URL
+# Build service and monorepo package dependencies
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter @@cloud-file-storage/$SERVICE_NAME install --frozen-lockfile
+RUN pnpm --filter @@cloud-file-storage/$SERVICE_NAME run build
+
+FROM node:$NODE_VERSION-alpine AS backend
+ARG SERVICE_NAME
+
+# Copy backend service with prod optimized node modules
+COPY --from=prod-deps /app/apps/$SERVICE_NAME/node_modules /app/apps/$SERVICE_NAME/node_modules
+COPY --from=prod-deps /app/node_modules /app/node_modules
+COPY --from=build /app/apps/$SERVICE_NAME/dist /app/apps/$SERVICE_NAME/dist
+# Start command
+WORKDIR /app/apps/$SERVICE_NAME
+CMD [ "node", "dist/src/main.js" ]
+
+FROM nginx:1-alpine AS vue
+ARG SERVICE_NAME
+# Copy build vue application
+COPY --from=build /app/apps/$SERVICE_NAME/dist/ /app
+# Copy nginx config
+COPY ./deployment/staging/vite/nginx.conf /etc/nginx/nginx.conf
+# Start command
+ENTRYPOINT ["nginx", "-g", "daemon off;"]

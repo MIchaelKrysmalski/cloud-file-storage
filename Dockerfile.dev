@@ -1,0 +1,32 @@
+ARG NODE_VERSION
+
+FROM node:$NODE_VERSION
+
+# Initialise arguments and env variables
+ARG APP_PATH
+ARG APP_NAME
+ARG PNPM_VERSION
+ARG START_SCRIPT
+ENV APP_NAME $APP_NAME
+ENV START_SCRIPT $START_SCRIPT
+
+# Install pnpm according to provided pnpm version
+RUN npm i -g pnpm@$PNPM_VERSION
+
+# Copy source code (of the required app + all packages)
+WORKDIR /usr/src/app
+
+COPY ./apps/$APP_PATH/ ./apps/$APP_PATH/
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Install dependencies
+RUN pnpm --filter $APP_NAME i
+
+# Build it once to speed up container start times
+RUN pnpm --filter $APP_NAME run build
+
+EXPOSE 5000
+
+# On container start update/install dependencies and run nestjs in debug mode
+CMD [ "sh", "-c","pnpm --filter $APP_NAME run $START_SCRIPT" ] 
