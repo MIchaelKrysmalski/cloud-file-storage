@@ -1,0 +1,37 @@
+{
+    "name": "@cloud-file-storage/root",
+    "version": "0.1.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+      "preinstall": "npx only-allow pnpm",
+      "format": "prettier . '!./volumes'",
+      "format:check": "pnpm format --check --debug-check",
+      "format:fix": "pnpm format --write",
+      "lint": "pnpm run -r --if-present lint",
+      "lint:fix": "pnpm run -r --if-present lint:fix",
+      "prepare": "if test \"$NODE_ENV\" != \"production\" ; then husky install ; fi"
+    },
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+      "@types/prettier": "^2.7.3",
+      "husky": "^8.0.0",
+      "lint-staged": "^13.2.3",
+      "prettier": "^3.0.1",
+      "prettier-plugin-tailwindcss": "^0.5.2",
+      "typescript": "^4.9.5"
+    },
+    "packageManager": "pnpm@8.6.0",
+    "workspaces": [
+      "apps/*"
+    ],
+    "engines": {
+      "pnpm": "^8.6.0"
+    },
+    "lint-staged": {
+      "!(*prettierignore)*": [
+        "prettier --write --ignore-unknown"
+      ]
+    }
+  }
