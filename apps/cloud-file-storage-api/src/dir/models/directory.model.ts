@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import mongoose from "mongoose";
 
 @Schema()
 export class Directory {
@@ -23,4 +24,4 @@ export class Directory {
     files;
 }
 
-export const DirectorySchema = SchemaFactory.createForClass(Directory);
+export type DirectoryDocument = Directory & mongoose.Document;

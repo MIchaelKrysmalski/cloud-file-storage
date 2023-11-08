@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import mongoose from "mongoose";
 import { Directory } from "src/dir/models/directory.model";
 
 @Schema()
@@ -21,4 +22,4 @@ export class File {
     directory?: Directory;
 }
 
-export const DirectorySchema = SchemaFactory.createForClass(Directory);
+export type FileDocument = File & mongoose.Document
